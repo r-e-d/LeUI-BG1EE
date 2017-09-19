@@ -1,0 +1,34 @@
+BACKUP ~LeUI-BG1EE/backup~
+AUTHOR ~lefreut@forum.baldursgate.com~
+VERSION ~1.0~
+LANGUAGE
+	~English~ ~en_US~ ~LeUI-BG1EE/lang/en_US/setup.tra~
+
+BEGIN @10000
+	REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet sod~ @90000
+	COPY ~LeUI-BG1EE/copy~ ~override~
+
+BEGIN @10001
+	REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet sod~ @90000
+	COPY ~LeUI-BG1EE/bam~ ~override~
+
+BEGIN @10002
+	REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet sod~ @90000
+	COPY_EXISTING ~M_STYLES.lua~ ~override~
+		REPLACE_TEXTUALLY ~styles\['parchment'\]\['font'\] = 'POSTANTI'~ ~styles['parchment']['font'] = 'TOOLFONT'~
+		REPLACE_TEXTUALLY ~styles\['parchment'\]\['point'\] = 12~ ~styles['parchment']['point'] = 13~
+
+BEGIN @10003
+	REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet sod~ @90000
+	COPY_EXISTING ~UI.menu~ ~override~
+		REPLACE_TEXTUALLY ~itemComparison = true~ ~itemComparison = false~
+
+BEGIN @10004
+	REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet sod~ @90000
+	COPY_EXISTING ~UI.menu~ ~override~
+		REPLACE_TEXTUALLY ~reverseButtonPosition = false~ ~reverseButtonPosition = true~
+
+BEGIN @10005
+	REQUIRE_PREDICATE GAME_IS ~bgee bg2ee eet sod~ @90000
+	COPY_EXISTING ~UI.menu~ ~override~
+		REPLACE_TEXTUALLY ~singleClickTravel = false~ ~singleClickTravel = true~

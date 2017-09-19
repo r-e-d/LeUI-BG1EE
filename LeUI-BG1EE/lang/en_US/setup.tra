@@ -1,0 +1,9 @@
+//component names
+@10000 = ~lefreut's Enhanced UI (BG1EE skin) - Core component~
+@10001 = ~lefreut's Enhanced UI (BG1EE skin) - BG2 vanilla bams for spells~
+@10002 = ~lefreut's Enhanced UI (BG1EE skin) - BG2 vanilla fonts for descriptions~
+@10003 = ~lefreut's Enhanced UI (BG1EE skin) - Disable item comparison feature~
+@10004 = ~lefreut's Enhanced UI (BG1EE skin) - Reverse +/- buttons position~
+@10005 = ~lefreut's Enhanced UI (BG1EE skin) - Single Click to Map Travel~
+//messages during installation
+@90000 = ~This mod requires BG1:EE, SOD, BG2:EE or EET~
