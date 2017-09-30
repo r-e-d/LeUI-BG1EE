@@ -14126,7 +14126,7 @@ menu
 	label
 	{
 		area 50 172 764 1
-		fill 255 212 169 150
+		fill 74 89 107 200
 	}
 
 	list
