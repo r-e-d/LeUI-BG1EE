@@ -6994,7 +6994,7 @@ menu
 		"
 			Infinity_PopMenu()
 			startEngine:OnTutorialButtonClick()
-			lastStartMenu = 'START_SP
+			lastStartMenu = 'START_SP'
 		"
 	}
 	button
