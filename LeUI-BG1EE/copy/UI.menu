@@ -6346,7 +6346,7 @@ end
 
 function getCampaignImportEnabled()
 	if eetState == 0 then
-		return return logoFrame ~= 0
+		return logoFrame ~= 0
 	end
 	return startCampaignData[currentCampaign].importEnabled
 end
