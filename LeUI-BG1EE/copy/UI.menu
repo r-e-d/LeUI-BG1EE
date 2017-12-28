@@ -1380,7 +1380,7 @@ menu
 		bam GUIOSTCL
 		area 272 120 300 44
 		text style "button"
-		text "PLAY_IMPORT_BUTTON"
+		text "PLAY_GAME_BUTTON"
 		action
 		"
 			characterScreen:OnPlayButtonClick()
@@ -3050,12 +3050,15 @@ end
 function getHotkeyName(category,number)
 	local key = keybindings[category][number][4]
 	if category < 5 then
-		return t(key)
+		local ret = t(key)
+		if ret ~= key then
+			return ret;
+		end
 	end
 	return Infinity_FetchString(key)
 end
 function setKey(newValue)
-	if newValue ~= 0 then
+	if newValue ~= 0 and newValue ~=27 and keybindings[keyCategory][key] ~= nil then
 		newValue = math.max(newValue, 0)
 
 		--Resolve conflicts.
@@ -3079,24 +3082,21 @@ function setKey(newValue)
 	end
 	key = 0
 end
-function revertKeymap(catIndex, keyIndex)
-	local key = keybindings[catIndex][keyIndex]
-	local default = key[7]
-	keybindings[catIndex][keyIndex][6] = default
-	Infinity_SetKey(default,key[1])
-	Infinity_RemoveINIEntry(keycategories[key[2]][3],key[3])
-end
-function revertKeymaps()
-	if key == 0 then
-		for catIndex, cat in pairs(keybindings) do
-			for keyIndex, key in pairs(cat) do
-				revertKeymap(catIndex, keyIndex)
-			end
-		end
-	else
-		revertKeymap(keyCategory, key)
+function revertKeymap()
+	if key ~= 0 then
+		local newValue = keybindings[keyCategory][key][7]
+		setKey(newValue)
+		return
 	end
-	key = 0
+
+	for catIndex, cat in pairs(keybindings) do
+		for keyIndex, key in pairs(cat) do
+			local default = key[7]
+			Infinity_RemoveINIEntry(keycategories[key[2]][3],key[3])
+			keybindings[catIndex][keyIndex][6] = default --Set the key in luas memory.
+			Infinity_SetKey(default,key[1])	--Set the key in C++ memory.
+		end
+	end 
 end
 `
 menu
@@ -3183,11 +3183,12 @@ menu
 	{
 		column
 		{
-			width 60
+			width 70
 			label
 			{
 				enabled "rowNumber ~= key and rowNumber ~= key_hover"
 				area 0 0 -1 -1
+				pad 0 2 0 3
 				text lua "getHotkeyName(keyCategory, rowNumber)"
 				text style "normal"
 				text align left center
@@ -3197,6 +3198,7 @@ menu
 			{
 				enabled "rowNumber == key and rowNumber ~= key_hover"
 				area 0 0 -1 -1
+				pad 0 2 0 3
 				text lua "getHotkeyName(keyCategory, rowNumber)"
 				text style "normal"
 				text align left center
@@ -3206,6 +3208,7 @@ menu
 			{
 				enabled "rowNumber == key_hover"
 				area 0 0 -1 -1
+				pad 0 2 0 3
 				text lua "getHotkeyName(keyCategory, rowNumber)"
 				text style "normal"
 				text align left center
@@ -3214,17 +3217,18 @@ menu
 		}
 		column
 		{
-			width 38
+			width 28
 			label
 			{
 				area 0 0 -1 -1
+				pad 0 3 0 2
 				text lua "keyboardMap[keybindings[keyCategory][rowNumber][6]]"
 				text style "label"
 				text align right center
 			}
 		}
-		area 450 198 366 410
-		rowheight 24
+		area 454 198 366 410
+		rowheight dynamic
 		hidehighlight
 		table		"keybindings[keyCategory]"
 		var			key
@@ -3239,7 +3243,7 @@ menu
 		"
 			if keybindings[keyCategory][key] ~= nil then
 				Infinity_StopKeybind()
-				setKey(-1)
+				key = 0
 			end
 		"
 		actionEnter	"key_hover = mouseoverRow"
@@ -3267,7 +3271,7 @@ menu
 		text "REVERT_BUTTON"
 		action
 		"
-			revertKeymaps()
+			revertKeymap()
 		"
 	}
 }
@@ -3475,7 +3479,6 @@ function restoreOverlayFromQuit()
 	else
 		Infinity_SetOverlay(nil)
 	end
-	Infinity_PopMenu('QuitMenu')
 end
 `
 menu
@@ -3503,6 +3506,7 @@ menu
 		on return
 		action
 		"
+			restoreOverlayFromQuit()
 			Infinity_ShutdownGame()
 		"
 	}
@@ -3516,6 +3520,7 @@ menu
 		action
 		"
 			restoreOverlayFromQuit()
+			Infinity_PopMenu('QuitMenu')
 		"
 	}
 }
@@ -4071,8 +4076,13 @@ function itemDescRightButtonAction()
 	end
 end
 function computeSplitPosition(str, name)
-	splitPos = (str:len() > 0 and str:byte() < 194) and 2 or -1
-	curPos = splitPos
+	startPos = -1
+	local firstChar = str:len() > 0 and str:byte() or 0
+	if firstChar >= 65 and firstChar <= 90 then startPos = 2
+	elseif firstChar >= 97 and firstChar <= 122 then startPos = 2
+	elseif firstChar == 195 then startPos = 3 end
+	splitPos = startPos
+	curPos = startPos
 	while splitPos ~= -1 do
 		local b = str:byte(curPos)
 		if b == nil then
@@ -4135,7 +4145,7 @@ menu
 		name "itemDescriptionSplit"
 		enabled "false"
 		area 0 0 380 -1
-		text lua "itemDesc.item.description:sub(2, curPos)"
+		text lua "itemDesc.item.description:sub(startPos, curPos)"
 		text style "parchment"
 		scrollbar 'GUISBR'
 	}
@@ -4149,13 +4159,13 @@ menu
 				enabled "rowNumber == 1"
 				area 0 0 40 38
 				bam INITIALS
-				sequence lua "itemDesc.item.description:byte() - 1"
+				sequence lua "itemDesc.item.description:byte(startPos - 1) - 1"
 			}
 			label
 			{
 				enabled "rowNumber == 1"
 				area 44 0 -1 -1
-				text lua "itemDesc.item.description:sub(2, splitPos - 1)"
+				text lua "itemDesc.item.description:sub(startPos, splitPos - 1)"
 				text style "parchment"
 			}
 			label
@@ -4508,7 +4518,7 @@ menu
 		area 2 0 72 55
 		bam GUILS10
 		sequence 9
-		tooltip lua "getTooltipWithHotkey(9,11942)"
+		tooltip lua "getTooltipWithHotkey(31,11942)"
 		clickable lua "sidebarsGreyed ~= 1"
 		action
 		"
@@ -5005,6 +5015,7 @@ menu
 	onClose
 	"
 		Infinity_PopMenu('CHARACTER_COLOR')
+		Infinity_PopMenu('ITEM_DESCRIPTION')
 		popSidebars()
 	"
 	label
@@ -5373,8 +5384,7 @@ menu
 	{
 		area 0 0 864 710
 		enabled "shouldGreyOutInventory()"
-		rectangle 0
-		rectangle opacity 200
+		fill 0 0 0 200
 	}
 }
 `
@@ -5396,23 +5406,6 @@ menu
 	modal
 	onOpen
 	"
-		if CurrentlyInGame() then
-			Infinity_PopMenu('CHARACTER_COLOR')
-		end
-		Infinity_PushMenu('CHARGEN_COLOR')
-	"
-	label
-	{
-		area 0 0 864 710
-	}
-}
-menu
-{
-	name 'CHARGEN_COLOR'
-	align center center
-	ignoreesc
-	onOpen
-	"
 		Infinity_UpdateLuaStats()
 
 		SLIDER_color_hair = characters[id].colors.hair
@@ -5427,7 +5420,6 @@ menu
 	"
 	onClose
 	"
-		Infinity_PopMenu('CHARACTER_COLOR')
 		if(SLIDER_color_hair_start ~= -1) then Infinity_SetHairColor(SLIDER_color_hair_start) end
 		if(SLIDER_color_skin_start ~= -1) then Infinity_SetSkinColor(SLIDER_color_skin_start) end
 		if(SLIDER_color_major_start ~= -1) then Infinity_SetMajorColor(SLIDER_color_major_start) end
@@ -5590,7 +5582,7 @@ menu
 				createCharScreen:OnDoneButtonClick()
 			end
 
-			Infinity_PopMenu('CHARGEN_COLOR')
+			Infinity_PopMenu('CHARACTER_COLOR')
 		"
 	}
 	button
@@ -5602,7 +5594,7 @@ menu
 		text "CANCEL_BUTTON"
 		action
 		"
-			Infinity_PopMenu('CHARGEN_COLOR')
+			Infinity_PopMenu('CHARACTER_COLOR')
 		"
 	}
 }
@@ -8196,7 +8188,7 @@ menu
 		name "popupDetailsSplit"
 		enabled "false"
 		area 0 0 665 -1
-		text lua "Infinity_FetchString(PopupDetails.description):sub(2, curPos)"
+		text lua "Infinity_FetchString(PopupDetails.description):sub(startPos, curPos)"
 		text style "parchment"
 		scrollbar 'GUISBR'
 	}
@@ -8210,13 +8202,13 @@ menu
 				enabled "rowNumber == 1"
 				area 0 0 40 38
 				bam INITIALS
-				sequence lua "Infinity_FetchString(PopupDetails.description):byte() - 1"
+				sequence lua "Infinity_FetchString(PopupDetails.description):byte(startPos - 1) - 1"
 			}
 			label
 			{
 				enabled "rowNumber == 1"
 				area 44 0 -1 -1
-				text lua "Infinity_FetchString(PopupDetails.description):sub(2, splitPos - 1)"
+				text lua "Infinity_FetchString(PopupDetails.description):sub(startPos, splitPos - 1)"
 				text style "parchment"
 			}
 			label
@@ -9324,7 +9316,7 @@ menu
 		name "chapterSplit"
 		enabled "false"
 		area 0 0 782 -1
-		text lua "text_CHAPTERSCROLL:sub(2, curPos)"
+		text lua "text_CHAPTERSCROLL:sub(startPos, curPos)"
 		text style normal
 		scrollbar 'GUISCRC'
 	}
@@ -9339,14 +9331,14 @@ menu
 				opacity lua "textOpacity"
 				area 0 0 40 38
 				bam INITIALS
-				sequence lua "text_CHAPTERSCROLL:byte() - 1"
+				sequence lua "text_CHAPTERSCROLL:byte(startPos - 1) - 1"
 			}
 			label
 			{
 				enabled "rowNumber == 1"
 				opacity lua "textOpacity"
 				area 44 0 -1 -1
-				text lua "text_CHAPTERSCROLL:sub(2, splitPos - 1)"
+				text lua "text_CHAPTERSCROLL:sub(startPos, splitPos - 1)"
 				text style normal
 			}
 			label
@@ -9435,7 +9427,7 @@ menu
 		name "epilogueSplit"
 		enabled "false"
 		area 0 0 470 -1
-		text lua "text_CHAPTERSCROLL:sub(2, curPos)"
+		text lua "text_CHAPTERSCROLL:sub(startPos, curPos)"
 		text style normal
 		scrollbar 'GUISCRC'
 	}
@@ -9450,14 +9442,14 @@ menu
 				opacity lua "textOpacity"
 				area 0 0 40 38
 				bam INITIALS
-				sequence lua "text_CHAPTERSCROLL:byte() - 1"
+				sequence lua "text_CHAPTERSCROLL:byte(startPos - 1) - 1"
 			}
 			label
 			{
 				enabled "rowNumber == 1"
 				opacity lua "textOpacity"
 				area 44 0 -1 -1
-				text lua "text_CHAPTERSCROLL:sub(2, splitPos - 1)"
+				text lua "text_CHAPTERSCROLL:sub(startPos, splitPos - 1)"
 				text style normal
 			}
 			label
@@ -10783,6 +10775,11 @@ menu
 	align center center
 	ignoreEsc
 	modal
+	onopen
+	"
+		Infinity_PopMenu('WORLD_MESSAGES')
+		Infinity_PushMenu('WORLD_MESSAGES')
+	"
 	label
 	{
 		area 0 0 677 234
@@ -10804,7 +10801,7 @@ menu
 		clickable lua "worldDeathLoadClickable()"
 		action
 		"
-			Infinity_PopMenu()
+			Infinity_PopMenu('WORLD_DEATH')
 			worldScreen:OnDeathLoad()
 		"
 	}
@@ -10817,7 +10814,7 @@ menu
 		clickable lua "worldDeathQuitClickable()"
 		action
 		"
-			Infinity_PopMenu()
+			Infinity_PopMenu('WORLD_DEATH')
 			worldScreen:OnDeathQuit()
 		"
 	}
@@ -12626,6 +12623,7 @@ menu
 		"
 			--On return pressed
 			if (key_pressed == 13) then
+				Infinity_FocusTextEdit('')
 				completeSave()
 				return -1
 			end
@@ -16421,7 +16419,7 @@ function chooseNetworkProtocol(num)
 	connectionScreen:SelectServiceProvider(num)
 end
 function joinGameEnabled()
-	if selectedMp <= 0 then
+	if selectedMp <= 0 or mp_shownSessions[selectedMp]['actualIndex'] == nil then
 		return 0
 	else
 		return 1
@@ -16695,6 +16693,9 @@ menu
 		tooltip lua "t('CONNECTION_DIRECT_CONNECT_TOOLTIP')"
 		action
 		"
+			selectedMp = 0
+			mp_shownSessions = {}
+			mp_sessions = {}
 			connectionIsHosting = false
 			chooseNetworkProtocol(2)
 		"
@@ -16708,6 +16709,9 @@ menu
 		tooltip lua "t('CONNECTION_REFRESH_TOOLTIP')"
 		action
 		"
+			selectedMp = 0
+			mp_shownSessions = {}
+			mp_sessions = {}
 			connectionScreen:ClearSessions()
 		"
 	}
@@ -16722,7 +16726,9 @@ menu
 		action
 		"
 			Infinity_GetPasswordRequired(mp_shownSessions[selectedMp]['actualIndex'])
-			if passwordReq == 0 then
+			if string.find(connectionPlayerNameEdit, '%S') == nil then
+				Infinity_PushMenu('CONNECTION_NAME')
+			elseif passwordReq == 0 then
 				Infinity_PopMenu();
 				Infinity_PopMenu();
 				mp_sessions[mp_shownSessions[selectedMp]['actualIndex']]['password'] = passwordMp
@@ -16815,10 +16821,10 @@ connectionPasswordProtected = 0
 connectionLocalNetworkGame = 0
 
 function connectionCreateGameClickable()
-	local ret = connectionPlayerNameEdit ~= '' and connectionSessionNameEdit ~= ''
+	local ret = string.find(connectionPlayerNameEdit, '%S') ~= nil and string.find(connectionSessionNameEdit, '%S') ~= nil
 
 	if connectionPasswordProtected == 1 then
-		ret = ret and connectionSessionPasswordEdit ~= ""
+		ret = ret and string.find(connectionSessionPasswordEdit, '%S') ~= nil
 	end
 
 	return ret
@@ -16976,6 +16982,9 @@ menu
 		text			"CREATEGAME_BUTTON"
 		action
 		"
+			connectionPlayerNameEdit = trim(connectionPlayerNameEdit)
+			connectionSessionNameEdit = trim(connectionSessionNameEdit)
+			connectionSessionPasswordEdit = trim(connectionSessionPasswordEdit)
 			if connectionPasswordProtected == 0 then
 				connectionSessionPasswordEdit = ''
 			end
@@ -17111,8 +17120,14 @@ menu
 		"
 			--On return pressed
 			if (key_pressed == 13) then
-				mp_sessions[selectedMp]['password'] = connectionPasswordPasswordEdit
-				Infinity_JoinMultiplayerGame(mp_shownSessions[selectedMp]['actualIndex'])
+				local stringStart = string.find(connectionNameNameEdit, '%S')
+				if stringStart ~= nil then
+					local stringStart = string.find(connectionPasswordPasswordEdit, '%S')
+					mp_sessions[selectedMp]['password'] = string.sub(connectionPasswordPasswordEdit, stringStart, string.len(connectionPasswordPasswordEdit) )
+					Infinity_PopMenu()
+					Infinity_JoinMultiplayerGame(mp_shownSessions[selectedMp]['actualIndex'])
+				end
+				return -1
 			end
 			return 1
 		"
@@ -17123,12 +17138,12 @@ menu
 		bam GUIOSTUL
 		text style "button"
 		text "DONE_BUTTON"
-		clickable lua "connectionPasswordPasswordEdit ~=''"
+		clickable lua "connectionPasswordPasswordEdit ~='' and string.find(connectionPasswordPasswordEdit, '%S') ~= nil"
 		on return
 		action
 		"
 			Infinity_PopMenu()
-			mp_sessions[selectedMp]['password'] = connectionPasswordPasswordEdit
+			mp_sessions[selectedMp]['password'] = trim(connectionPasswordPasswordEdit)
 			Infinity_JoinMultiplayerGame(mp_shownSessions[selectedMp]['actualIndex'])
 		"
 	}
@@ -17138,6 +17153,103 @@ menu
 		bam GUIOSTUR
 		text "BACK_BUTTON"
 		text style"button"
+		on escape
+		action
+		"
+			Infinity_PopMenu()
+		"
+	}
+}
+`
+connectionNameNameEdit = ""
+`
+menu
+{
+	name 'CONNECTION_NAME'
+	align center center
+	modal
+	onOpen
+	"
+		connectionNameNameEdit = ''
+		Infinity_FocusTextEdit('connectionNameNameEditArea')
+	"
+
+	label
+	{
+		area 0 0 677 234
+		mosaic GUIERR6
+	}
+	label
+	{
+		area 38 20 592 64
+		text style 'title'
+		text "PLAYER_NAME_LABEL"
+	}
+
+	edit
+	{
+		name "connectionNameNameEditArea"
+		area 62 88 532 32
+		var connectionNameNameEdit
+		text style "edit"
+		text align center center
+		maxlines 1
+		fill 112 111 111 64
+		action
+		"
+			--On return pressed
+			if (key_pressed == 13) then
+				local stringStart = string.find(connectionNameNameEdit, '%S')
+				if stringStart ~= nil then
+					connectionPlayerNameEdit = string.sub(connectionNameNameEdit, stringStart, string.len(connectionNameNameEdit) )
+					Infinity_PopMenu()
+
+					Infinity_GetPasswordRequired(mp_shownSessions[selectedMp]['actualIndex'])
+					if passwordReq == 0 then
+						Infinity_PopMenu()
+						Infinity_PopMenu()
+						mp_sessions[mp_shownSessions[selectedMp]['actualIndex']]['password'] = passwordMp
+						Infinity_JoinMultiplayerGame(mp_shownSessions[selectedMp]['actualIndex'])
+					else
+						Infinity_PushMenu('CONNECTION_PASSWORD')
+					end
+				end
+				return -1
+			end
+			return 1
+		"
+	}
+
+	button
+	{
+		area 94 170 234 44
+		bam GUIOSTUL
+		text "DONE_BUTTON"
+		text style "button"
+		on return
+		clickable lua "connectionNameNameEdit ~='' and string.find(connectionNameNameEdit, '%S') ~= nil"
+		action
+		"
+			Infinity_PopMenu()
+			connectionPlayerNameEdit = trim(connectionNameNameEdit)
+
+			Infinity_GetPasswordRequired(mp_shownSessions[selectedMp]['actualIndex'])
+			if passwordReq == 0 then
+				Infinity_PopMenu()
+				Infinity_PopMenu()
+				mp_sessions[mp_shownSessions[selectedMp]['actualIndex']]['password'] = passwordMp
+				Infinity_JoinMultiplayerGame(mp_shownSessions[selectedMp]['actualIndex'])
+			else
+				Infinity_PushMenu('CONNECTION_PASSWORD')
+			end
+		"
+	}
+	button
+	{
+		area 364 170 234 44
+		bam GUIOSTUR
+		text "BACK_BUTTON"
+		text style "button"
 		on escape
 		action
 		"
@@ -17189,14 +17301,10 @@ menu
 			}
 		}
 
-		action
-		"
-		"
-
+		hidehighlight
 		rowheight 50
 		area 83 99 338 338
 		table "connection.currentPlayers"
-		var connectionSelectedPlayer
 	}
 
 	edit
@@ -17301,6 +17409,20 @@ menu
 		area 82 74 242 88
 		text "CONNECTION_FINDING_DEVICES"
 		text style "label"
+	}
+	button
+	{
+		area 52 218 300 44
+		bam GUIOSTCL
+		text "CANCEL_BUTTON"
+		text style "button"
+		on escape
+		action
+		"
+			Infinity_PopMenu('CONNECTION_WAITING_FOR_PROVIDER')
+			Infinity_PopMenu('CONNECTION')
+			connectionScreen:OnMainCancelButtonClick()
+		"
 	}
 }
 
@@ -17596,7 +17718,6 @@ function updateMultiplayerSessionData(sessionName, saveName, areaName, timePlaye
 end
 
 function broadcastCharacterControlChange(slot, newPlayer)
-	print("newPlayer "..newPlayer.." current "..currentMultiplayerSelectPlayer.." playernumber "..mpaCharacters[slot]["player"])
 	if mpaCharacters[slot]["player"] ~= newPlayer then
 		local host = getMultiplayerPlayerName(1,false,false)
 		local player = getMultiplayerPlayerName(newPlayer,false,false)
@@ -17675,7 +17796,6 @@ mpDraggedPortrait = 'NOCTRL'
 
 function multiplayerStartSwapPortraits(player, character)
 	if multiplayerLocalPlayerID == 1 and player > 0 and player < 7 and mpaPlayers[player]["name"] ~= "" then
-		print("Starting the drag of player "..player.." character slot "..character)
 		mpDraggedCharacter = character
 		multiplayerScreen:SetModifiedCharacterSlot(character - 1)
 		currentMultiplayerSelectPlayer = player
@@ -17686,6 +17806,9 @@ end
 function multiplayerStopSwapPortraits(player)
 	if multiplayerLocalPlayerID == 1 then
 		if player > 0 and player < 7 and mpaPlayers[player]["name"] ~= "" and currentMultiplayerSelectPlayer ~= nil then
+			if mpaCharacters[mpDraggedCharacter]['ready'] == true and mpaCharacters[mpDraggedCharacter]['player'] ~= player then 
+				multiplayerScreen:OnReadyButtonClick(mpDraggedCharacter-1)
+			end
 			broadcastCharacterControlChange(mpDraggedCharacter, player)
 			multiplayerScreen:OnPlayerSelection(player-1)
 		end
@@ -17723,15 +17846,14 @@ function multiplayerUpdateDraggedPortrait()
 end
 
 function get4CheckFrame(slot)
-	local ret = 1
-
-	if mpaCharacters[slot]['ready'] == true and mpaCharacters[slot]['player'] == multiplayerLocalPlayerID then
-		ret = 0
-	elseif mpaCharacters[slot]['ready'] == true then
-		ret = 2
+	if mpaCharacters[slot]['ready'] == true then
+		return 0
 	end
+	return 1
+end
 
-	return ret
+function is4CheckEnabled(slot)
+	return getMultiplayerCharacterReadyText(slot) ~= '' and mpaCharacters[slot]['player'] == multiplayerLocalPlayerID
 end
 `
 menu
@@ -17758,21 +17880,21 @@ menu
 
 	label
 	{
-		area 512 96 136 22
+		area 510 96 136 22
 		text lua "t('PLAYER_LABEL')"
 		text style "label"
 		align center center
 	}
 	label
 	{
-		area 648 96 232 22
+		area 646 96 232 22
 		text lua "t('CHARACTER_LABEL')"
 		text style "label"
 		align center center
 	}
 	label
 	{
-		area 880 96 103 22
+		area 878 96 112 22
 		text lua "t('READY_TO_PLAY_LABEL')"
 		text style "label"
 		align center center
@@ -17819,7 +17941,7 @@ menu
 			}
 			label
 			{
-				area		6 5 56 85
+				area		5 5 56 84
 				bitmap lua	'mpaCharacters[rowNumber]["portrait"]'
 				sequence 	1
 				align 		center center
@@ -17919,6 +18041,7 @@ menu
 	{
 		area 942 124 50 50
 		bam 		"4CHECK"
+		enabled "is4CheckEnabled(1)"
 		sequence lua "get4CheckFrame(1)"
 		align 		center center
 		tooltip lua "getMultiplayerReadyTooltip(1)"
@@ -17935,6 +18058,7 @@ menu
 	{
 		area 942 219 50 50
 		bam 		"4CHECK"
+		enabled "is4CheckEnabled(2)"
 		sequence lua "get4CheckFrame(2)"
 		align 		center center
 		tooltip lua "getMultiplayerReadyTooltip(2)"
@@ -17951,6 +18075,7 @@ menu
 	{
 		area 942 314 50 50
 		bam 		"4CHECK"
+		enabled "is4CheckEnabled(3)"
 		sequence lua "get4CheckFrame(3)"
 		align 		center center
 		tooltip lua "getMultiplayerReadyTooltip(3)"
@@ -17967,6 +18092,7 @@ menu
 	{
 		area 942 409 50 50
 		bam 		"4CHECK"
+		enabled "is4CheckEnabled(4)"
 		sequence lua "get4CheckFrame(4)"
 		align 		center center
 		tooltip lua "getMultiplayerReadyTooltip(4)"
@@ -17983,6 +18109,7 @@ menu
 	{
 		area 942 504 50 50
 		bam 		"4CHECK"
+		enabled "is4CheckEnabled(5)"
 		sequence lua "get4CheckFrame(5)"
 		align 		center center
 		tooltip lua "getMultiplayerReadyTooltip(5)"
@@ -17999,6 +18126,7 @@ menu
 	{
 		area 942 599 50 50
 		bam 		"4CHECK"
+		enabled "is4CheckEnabled(6)"
 		sequence lua "get4CheckFrame(6)"
 		align 		center center
 		tooltip lua "getMultiplayerReadyTooltip(6)"
@@ -18219,7 +18347,8 @@ menu
 		area		446 390 46 45
 		bam 			GUMPBUTX
 		sequence 		3
-		clickable lua	"mpaPlayers[2]['name'] ~= ''"
+		enabled	"mpaPlayers[2]['name'] ~= ''"
+		clickable lua	"multiplayerLocalPlayerID == 1 or multiplayerLocalPlayerID == 2"
 		align 		center center
 		tooltip lua	"t('MULTIPALYER_PERMISSION_TOOLTIP')"
 		action
@@ -18236,7 +18365,8 @@ menu
 		area		446 441 46 45
 		bam 			GUMPBUTX
 		sequence 		3
-		clickable lua	"mpaPlayers[3]['name'] ~= ''"
+		enabled	"mpaPlayers[3]['name'] ~= ''"
+		clickable lua	"multiplayerLocalPlayerID == 1 or multiplayerLocalPlayerID == 3"
 		align 		center center
 		tooltip lua	"t('MULTIPALYER_PERMISSION_TOOLTIP')"
 		action
@@ -18253,7 +18383,8 @@ menu
 		area		446 492 46 45
 		bam 			GUMPBUTX
 		sequence 		3
-		clickable lua	"mpaPlayers[4]['name'] ~= ''"
+		enabled	"mpaPlayers[4]['name'] ~= ''"
+		clickable lua	"multiplayerLocalPlayerID == 1 or multiplayerLocalPlayerID == 4"
 		align 		center center
 		tooltip lua	"t('MULTIPALYER_PERMISSION_TOOLTIP')"
 		action
@@ -18270,7 +18401,8 @@ menu
 		area		446 543 46 45
 		bam 			GUMPBUTX
 		sequence 		3
-		clickable lua	"mpaPlayers[5]['name'] ~= ''"
+		enabled	"mpaPlayers[5]['name'] ~= ''"
+		clickable lua	"multiplayerLocalPlayerID == 1 or multiplayerLocalPlayerID == 5"
 		align 		center center
 		tooltip lua	"t('MULTIPALYER_PERMISSION_TOOLTIP')"
 		action
@@ -18287,7 +18419,8 @@ menu
 		area		446 594 46 45
 		bam 			GUMPBUTX
 		sequence 		3
-		clickable lua	"mpaPlayers[6]['name'] ~= ''"
+		enabled	"mpaPlayers[6]['name'] ~= ''"
+		clickable lua	"multiplayerLocalPlayerID == 1 or multiplayerLocalPlayerID == 6"
 		align 		center center
 		tooltip lua	"t('MULTIPALYER_PERMISSION_TOOLTIP')"
 		action
@@ -18326,8 +18459,12 @@ menu
 		align 				center center
 		actionSimpleDrag
 		"
-			local slot = getMultiplayerPlayerControlledCharacterSlot(1,2)
-			multiplayerStartSwapPortraits(1,slot)
+			if multiplayerFromInGame == false then
+				local slot = getMultiplayerPlayerControlledCharacterSlot(1,2)
+				multiplayerStartSwapPortraits(1,slot)
+			elseif multiplayerLocalPlayerID == 1 or multiplayer.player[multiplayerLocalPlayerID].permissions[1] == true then
+				multiplayerScreen:OnModifyButtonClick()
+			end
 		"
 		actionSimpleDrop
 		"
@@ -18342,8 +18479,12 @@ menu
 		align 				center center
 		actionSimpleDrag
 		"
-			local slot = getMultiplayerPlayerControlledCharacterSlot(1,3)
-			multiplayerStartSwapPortraits(1,slot)
+			if multiplayerFromInGame == false then
+				local slot = getMultiplayerPlayerControlledCharacterSlot(1,3)
+				multiplayerStartSwapPortraits(1,slot)
+			elseif multiplayerLocalPlayerID == 1 or multiplayer.player[multiplayerLocalPlayerID].permissions[1] == true then
+				multiplayerScreen:OnModifyButtonClick()
+			end
 		"
 		actionSimpleDrop
 		"
@@ -18358,8 +18499,12 @@ menu
 		align 				center center
 		actionSimpleDrag
 		"
-			local slot = getMultiplayerPlayerControlledCharacterSlot(1,4)
-			multiplayerStartSwapPortraits(1,slot)
+			if multiplayerFromInGame == false then
+				local slot = getMultiplayerPlayerControlledCharacterSlot(1,4)
+				multiplayerStartSwapPortraits(1,slot)
+			elseif multiplayerLocalPlayerID == 1 or multiplayer.player[multiplayerLocalPlayerID].permissions[1] == true then
+				multiplayerScreen:OnModifyButtonClick()
+			end
 		"
 		actionSimpleDrop
 		"
@@ -18374,8 +18519,12 @@ menu
 		align 				center center
 		actionSimpleDrag
 		"
-			local slot = getMultiplayerPlayerControlledCharacterSlot(1,5)
-			multiplayerStartSwapPortraits(1,slot)
+			if multiplayerFromInGame == false then
+				local slot = getMultiplayerPlayerControlledCharacterSlot(1,5)
+				multiplayerStartSwapPortraits(1,slot)
+			elseif multiplayerLocalPlayerID == 1 or multiplayer.player[multiplayerLocalPlayerID].permissions[1] == true then
+				multiplayerScreen:OnModifyButtonClick()
+			end
 		"
 		actionSimpleDrop
 		"
@@ -18390,8 +18539,12 @@ menu
 		align 				center center
 		actionSimpleDrag
 		"
-			local slot = getMultiplayerPlayerControlledCharacterSlot(1,6)
-			multiplayerStartSwapPortraits(1,slot)
+			if multiplayerFromInGame == false then
+				local slot = getMultiplayerPlayerControlledCharacterSlot(1,6)
+				multiplayerStartSwapPortraits(1,slot)
+			elseif multiplayerLocalPlayerID == 1 or multiplayer.player[multiplayerLocalPlayerID].permissions[1] == true then
+				multiplayerScreen:OnModifyButtonClick()
+			end
 		"
 		actionSimpleDrop
 		"
@@ -19038,12 +19191,12 @@ menu
 `
 multiplayerPermissions =
 {
-	{'MULTIPLAYER_PERMISSIONS_MODIFY',	'MULTIPLAYER_PERMISSIONS_MODIFY_TOOLTIP',	false, false},
-	{'MULTIPLAYER_PERMISSIONS_GOLD',	'MULTIPLAYER_PERMISSIONS_GOLD_TOOLTIP',		false, false},
-	{'MULTIPLAYER_PERMISSIONS_TRAVEL',	'MULTIPLAYER_PERMISSIONS_TRAVEL_TOOLTIP',	false, false},
-	{'MULTIPLAYER_PERMISSIONS_VIEW',	'MULTIPLAYER_PERMISSIONS_VIEW_TOOLTIP',		false, false},
-	{'MULTIPLAYER_PERMISSIONS_DIALOGUE','MULTIPLAYER_PERMISSIONS_DIALOGUE_TOOLTIP',	false, false},
-	{'MULTIPLAYER_PERMISSIONS_PAUSE',	'MULTIPLAYER_PERMISSIONS_PAUSE_TOOLTIP',	false, false}
+	{'MULTIPLAYER_PERMISSIONS_MODIFY',	'MULTIPLAYER_PERMISSIONS_MODIFY_TOOLTIP',	false, false, 7},
+	{'MULTIPLAYER_PERMISSIONS_GOLD',	'MULTIPLAYER_PERMISSIONS_GOLD_TOOLTIP',		false, false, 0},
+	{'MULTIPLAYER_PERMISSIONS_TRAVEL',	'MULTIPLAYER_PERMISSIONS_TRAVEL_TOOLTIP',	false, false, 1},
+	{'MULTIPLAYER_PERMISSIONS_VIEW',	'MULTIPLAYER_PERMISSIONS_VIEW_TOOLTIP',		false, false, 3},
+	{'MULTIPLAYER_PERMISSIONS_DIALOGUE','MULTIPLAYER_PERMISSIONS_DIALOGUE_TOOLTIP',	false, false, 2},
+	{'MULTIPLAYER_PERMISSIONS_PAUSE',	'MULTIPLAYER_PERMISSIONS_PAUSE_TOOLTIP',	false, false, 4}
 }
 
 function broadcastPermissionChange(player,permission,setting)
@@ -19065,7 +19218,7 @@ end
 function getMultiplayerPlayerPermissionDescription()
 	local player = getMultiplayerPlayerName(multiplayerInPermissionForPlayer,false,false)
 	setStringTokenLua("<PLAYER_NAME_1>",player)
- 	local canPerform = t("MULTIPLAYER_CAN_PERFORM")
+	local canPerform = t("MULTIPLAYER_CAN_PERFORM")
 	removeStringTokenLua("<PLAYER_NAME_1>")
 
 	return canPerform
@@ -19078,10 +19231,21 @@ menu
 	modal
 	onOpen
 	"
-		local index = 1
-		for index = 1, #(multiplayerPermissions), 1 do
-			multiplayerPermissions[index][3] = multiplayer.player[multiplayerInPermissionForPlayer].permissions[index]
-			multiplayerPermissions[index][4] = multiplayerPermissions[index][3]
+		for index = 0, #(multiplayer.player[multiplayerInPermissionForPlayer].permissions), 1 do
+			local luaIndex = -1
+			local loopLuaIndex = -1
+
+			for loopLuaIndex = 1, #multiplayerPermissions, 1 do
+				if multiplayerPermissions[loopLuaIndex][5] == index then
+					luaIndex = loopLuaIndex
+					break
+				end
+			end
+
+			if luaIndex ~= -1 then
+				multiplayerPermissions[luaIndex][3] = multiplayer.player[multiplayerInPermissionForPlayer].permissions[index]
+				multiplayerPermissions[luaIndex][4] = multiplayerPermissions[luaIndex][3]
+			end
 		end
 	"
 
@@ -19117,10 +19281,10 @@ menu
 		action
 		"
 			local index = 1
-			for index = 1, #(multiplayerPermissions), 1 do
+			for index = #(multiplayerPermissions), 1, -1 do
 				if multiplayerPermissions[index][3] ~= multiplayerPermissions[index][4] then
 					broadcastPermissionChange(multiplayerInPermissionForPlayer,index,multiplayerPermissions[index][3])
-					multiplayerScreen:OnPermissionButtonClick(multiplayerInPermissionForPlayer - 1, index)
+					multiplayerScreen:OnPermissionButtonClick(multiplayerInPermissionForPlayer - 1, multiplayerPermissions[index][5])
 				end
 			end
 			multiplayerInPermission = false
@@ -19503,7 +19667,25 @@ menu
 		"
 	}
 }
+`
+function getActivePlayerIndex(index)
+	local ret = -1
+	local count = 0
+	local slot = 0
 
+	for slot = 1, 6, 1 do
+		if mpaPlayers[slot]["name"] ~= '' then
+			count = count + 1
+		end
+		if count == index then
+			ret = slot
+			break
+		end
+	end
+
+	return ret
+end
+`
 menu
 {
 	name 'MP_PICKPLAYER'
@@ -19536,7 +19718,7 @@ menu
 			label
 			{
 				area 0 0 340 32
-				text lua "getMultiplayerPlayerName(rowNumber, false, true)"
+				text lua "getMultiplayerPlayerName(getActivePlayerIndex(rowNumber), false, true)"
 				text style "normal"
 				align left center
 			}
@@ -19556,8 +19738,11 @@ menu
 		bam GUIOSTUM
 		action
 		"
-			broadcastCharacterControlChange(selectedCharacter, currentMultiplayerSelectPlayer)
-			multiplayerScreen:OnPlayerSelection(currentMultiplayerSelectPlayer-1)
+			if mpaCharacters[selectedCharacter]['ready'] == true and mpaCharacters[selectedCharacter]['player'] ~= getActivePlayerIndex(currentMultiplayerSelectPlayer) then
+				multiplayerScreen:OnReadyButtonClick(selectedCharacter-1)
+			end
+			broadcastCharacterControlChange(selectedCharacter, getActivePlayerIndex(currentMultiplayerSelectPlayer))
+			multiplayerScreen:OnPlayerSelection(getActivePlayerIndex(currentMultiplayerSelectPlayer)-1)
 			Infinity_PopMenu()
 		"
 	}
@@ -19882,6 +20067,7 @@ menu
 		text lua "getMPMessage()"
 		pad 8 8 8 8
 		rectangle 1
+		ignoreEvents
 	}
 	text
 	{
