@@ -14258,7 +14258,7 @@ menu
 
 	button
 	{
-		area 772 552 201 44
+		area 772 548 201 44
 		text "IMPORT_BUTTON"
 		text style "button"
 		bam GUIOSTUM
@@ -16550,13 +16550,13 @@ menu
 	ignoreesc
 	onOpen
 	"
-		charNameEdit = ''
 		Infinity_PlaySound('GAM_03')
 		if chargen.name then
 			charNameEdit = chargen.name
+		else
+			charNameEdit = ''
+			Infinity_FocusTextEdit('charNameEditArea')
 		end
-		Infinity_FocusTextEdit('charNameEditArea')
-		Infinity_ClickScreen()
 	"
 	onClose
 	"
@@ -16573,10 +16573,15 @@ menu
 		text "ENTER_NAME_LABEL"
 		text style "title"
 	}
+	label
+	{
+		area 74 116 256 34
+		fill 112 111 111 64
+	}
 	edit
 	{
 		name		"charNameEditArea"
-		area		100 114 204 42
+		area		80 122 244 24
 		var			charNameEdit
 		text style	"edit"
 		maxlines	1
