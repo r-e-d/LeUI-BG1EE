@@ -11,3 +11,11 @@ See https://forums.beamdog.com/discussion/66226/mod-lefreuts-enhanced-ui-bg1ee-s
 If the mod was previously installed, uninstall it before extracting the new version. LeUI is packaged and installed with WeiDU.
 
 To install, extract the contents of the archive into your game folder (the folder which contains the chitin.key file) and then double-click setup-LeUI-BG1EE.exe and follow the instructions on screen.
+
+### Install Order
+
+LeUI should be installed *before* EEUITweaks.
+
+LeUI should be installed *before* mods that patch the UI (Sword Coast Stratagems, Tome & Blood, Might & Guile, Shadow Magic, Deities of Faerun, or Faiths & Powers).
+
+LeUI *is not compatible* with other UI overhauls mods (Dragonspear UI++, Revised Dragon Scale, ...).
