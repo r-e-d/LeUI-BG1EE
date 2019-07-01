@@ -11988,6 +11988,7 @@ menu
 		if(groundItemsButtonToggle == 1) then
 			worldScreen:StartGroundItems()
 		end
+		worldScreen:SetHighlightEnabled(highlightButtonToggle == 1)
 	"
 	onClose
 	"
