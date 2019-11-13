@@ -10647,7 +10647,7 @@ function checkContainerText(normalStr, containerStr)
 end
 function getItemUsages()
 	local item = store.storeItems[rowNumber].item
-	if(item.usages > 1) then
+	if(item.usages ~= nil) then
 		return item.usages
 	end
 	if(item.stackSize > 1) then
@@ -13257,7 +13257,7 @@ menu
 	}
 	label
 	{
-		area 162 16 700 60
+		area 162 6 700 50
 		text "SAVE_TITLE"
 		text style "title"
 		text point 26
@@ -14094,7 +14094,19 @@ menu
 }
 `
 function getDialogButtonEnabled()
-	return (#worldPlayerDialogChoices == 0)
+	if(gameOptions.m_bConfirmDialog == true) then
+		return true
+	else
+		return (#worldPlayerDialogChoices == 0)
+	end
+end
+
+function getDialogButtonClickable()
+	if(gameOptions.m_bConfirmDialog == true) then
+		return (#worldPlayerDialogChoices == 0) or (worldPlayerDialogSelection and worldPlayerDialogSelection > 2) --no choices, or we've selected a choice.
+	else
+		return true
+	end
 end
 `
 menu
@@ -14109,10 +14121,18 @@ menu
 		bam GUIOSTCL
 		text lua "dialogButtonText"
 		enabled "getDialogButtonEnabled()"
+		clickable lua "getDialogButtonClickable()"
 		text style "button"
 		action
 		"
-			worldScreen:StepDialog()
+			if(gameOptions.m_bConfirmDialog == true and (#worldPlayerDialogChoices > 0)) then
+				-- if confirm dialog and choices available.
+				worldScreen:OnDialogReplyClick(worldPlayerDialogChoices[worldPlayerDialogSelection - 2].marker)
+				worldPlayerDialogSelection = 0
+			else
+				-- no choices, just step.
+				worldScreen:StepDialog()
+			end
 		"
 	}
 }
