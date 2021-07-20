@@ -1346,9 +1346,9 @@ function compareCustomSound(s1, s2)
 	elseif (s2.sound == "DEFAULT" and s1.sound ~= "DEFAULT") then
 		return false
 	elseif (string.sub(s1.sound, 1, 4) == "BDTP" and string.sub(s2.sound, 1, 4) ~= "BDTP") then
-		return false
+		return false;
 	elseif (string.sub(s2.sound, 1, 4) == "BDTP" and string.sub(s1.sound, 1, 4) ~= "BDTP") then
-		return true
+		return true;
 	end
 	return s1.sound < s2.sound
 end
@@ -4209,6 +4209,7 @@ function itemDescLeftButtonAction()
 		if(itemDesc.item.identified == 0) then
 			Infinity_OnSpellIdentify(itemDesc.id)
 			itemDesc.item = characters[id].equipment[selectedSlot].item --update itemDesc item
+			computeSplitPosition(itemDesc.item.description, 'itemDescriptionSplit')
 		else
 			Infinity_PushMenu('ITEM_ABILITIES',0,0)
 		end
@@ -4237,6 +4238,7 @@ function itemDescRightButtonAction()
 		if(itemDesc.item.identified == 0) then
 			Infinity_OnScrollIdentify(itemDesc.id)
 			itemDesc.item = characters[id].equipment[selectedSlot].item --update itemDesc item
+			computeSplitPosition(itemDesc.item.description, 'itemDescriptionSplit')
 		else
 			Infinity_PopMenu()
 			Infinity_OnUseButtonClick(itemDesc.id, itemDesc.useMode)
@@ -4254,6 +4256,7 @@ function computeSplitPosition(str, name)
 	elseif firstChar == 195 then startPos = 3 end
 	splitPos = startPos
 	curPos = startPos
+	local newLine = false
 	while splitPos ~= -1 do
 		local b = str:byte(curPos)
 		if b == nil then
@@ -4264,7 +4267,10 @@ function computeSplitPosition(str, name)
 			curPos = curPos + 2
 		elseif b >= 194 then
 			curPos = curPos + 1
-		elseif b == 10 or b == 32 then
+		elseif b == 10 then
+			splitPos = curPos
+			newLine = true
+		elseif b == 32 and not newLine then
 			splitPos = curPos
 		end
 		Infinity_ScaleToText(name)
@@ -4281,7 +4287,7 @@ menu
 	modal
 	onOpen
 	"
-		-- Infinity_PlaySound('GAM_03')
+		Infinity_PlaySound('GAM_03')
 		computeSplitPosition(itemDesc.item.description, 'itemDescriptionSplit')
 	"
 	onClose
@@ -4316,7 +4322,7 @@ menu
 	{
 		name "itemDescriptionSplit"
 		enabled "false"
-		area 0 0 380 -1
+		area 44 0 370 -1
 		text lua "itemDesc.item.description:sub(startPos, curPos)"
 		text style "parchment"
 		scrollbar 'GUISBR'
@@ -4336,14 +4342,15 @@ menu
 			label
 			{
 				enabled "rowNumber == 1"
-				area 44 0 386 -1
+				area 44 0 370 -1
 				text lua "itemDesc.item.description:sub(startPos, splitPos - 1)"
 				text style "parchment"
 			}
 			label
 			{
 				enabled "rowNumber == 2"
-				area 0 0 430 -1
+				area 0 0 -1 -1
+				pad 0 0 16 0
 				text lua "itemDesc.item.description:sub(splitPos + 1)"
 				text style "parchment"
 			}
@@ -4398,7 +4405,6 @@ menu
 		area		327 638 201 44
 		text  "DONE_BUTTON"
 		text style "button"
-		sound ""
 		action
 		"
 			Infinity_PopMenu()
@@ -8794,7 +8800,7 @@ menu
 	{
 		name "spellDescriptionSplit"
 		enabled "false"
-		area 0 0 665 -1
+		area 44 0 655 -1
 		text lua "Infinity_FetchString(currentSpell.description):sub(startPos, curPos)"
 		text style "parchment"
 		scrollbar 'GUISBR'
@@ -8814,14 +8820,15 @@ menu
 			label
 			{
 				enabled "rowNumber == 1"
-				area 44 0 671 -1
+				area 44 0 655 -1
 				text lua "Infinity_FetchString(currentSpell.description):sub(startPos, splitPos - 1)"
 				text style "parchment"
 			}
 			label
 			{
 				enabled "rowNumber == 2"
-				area 0 0 715 -1
+				area 0 0 -1 -1
+				pad 0 0 16 0
 				text lua "Infinity_FetchString(currentSpell.description):sub(splitPos + 1)"
 				text style "parchment"
 			}
@@ -8848,7 +8855,6 @@ menu
 		bam GUIOSTUM
 		text "DONE_BUTTON"
 		text style "button"
-		sound ""
 		action "Infinity_PopMenu('SPELL_DESCRIPTION')"
 	}
 	button
@@ -9077,7 +9083,7 @@ menu
 	{
 		name "popupDetailsSplit"
 		enabled "false"
-		area 0 0 665 -1
+		area 44 0 655 -1
 		text lua "Infinity_FetchString(PopupDetails.description):sub(startPos, curPos)"
 		text style "parchment"
 		scrollbar 'GUISBR'
@@ -9097,14 +9103,15 @@ menu
 			label
 			{
 				enabled "rowNumber == 1"
-				area 44 0 671 -1
+				area 44 0 655 -1
 				text lua "Infinity_FetchString(PopupDetails.description):sub(startPos, splitPos - 1)"
 				text style "parchment"
 			}
 			label
 			{
 				enabled "rowNumber == 2"
-				area 0 0 715 -1
+				area 0 0 -1 -1
+				pad 0 0 16 0
 				text lua "Infinity_FetchString(PopupDetails.description):sub(splitPos + 1)"
 				text style "parchment"
 			}
@@ -9131,7 +9138,6 @@ menu
 		text "DONE_BUTTON"
 		text style "button"
 		on escape
-		sound ""
 		action
 		"
 			Infinity_PopMenu('POPUP_DETAILS')
@@ -10509,7 +10515,7 @@ menu
 	{
 		name "chapterSplit"
 		enabled "false"
-		area 0 0 782 -1
+		area 44 0 772 -1
 		text lua "text_CHAPTERSCROLL:sub(startPos, curPos)"
 		text style normal
 		scrollbar 'GUISCRC'
@@ -10531,7 +10537,7 @@ menu
 			{
 				enabled "rowNumber == 1"
 				opacity lua "textOpacity"
-				area 44 0 788 -1
+				area 44 0 772 -1
 				text lua "text_CHAPTERSCROLL:sub(startPos, splitPos - 1)"
 				text style normal
 			}
@@ -10539,7 +10545,8 @@ menu
 			{
 				enabled "rowNumber == 2"
 				opacity lua "textOpacity"
-				area 0 0 832 -1
+				area 0 0 -1 -1
+				pad 0 0 16 0
 				text lua "text_CHAPTERSCROLL:sub(splitPos + 1)"
 				text style normal
 			}
@@ -10627,7 +10634,7 @@ menu
 	{
 		name "epilogueSplit"
 		enabled "false"
-		area 0 0 470 -1
+		area 44 0 460 -1
 		text lua "text_CHAPTERSCROLL:sub(startPos, curPos)"
 		text style normal
 		scrollbar 'GUISCRC'
@@ -10649,7 +10656,7 @@ menu
 			{
 				enabled "rowNumber == 1"
 				opacity lua "textOpacity"
-				area 44 0 476 -1
+				area 44 0 460 -1
 				text lua "text_CHAPTERSCROLL:sub(startPos, splitPos - 1)"
 				text style normal
 			}
@@ -10657,7 +10664,8 @@ menu
 			{
 				enabled "rowNumber == 2"
 				opacity lua "textOpacity"
-				area 0 0 520 -1
+				area 0 0 -1 -1
+				pad 0 0 16 0
 				text lua "text_CHAPTERSCROLL:sub(splitPos + 1)"
 				text style normal
 			}
@@ -14175,14 +14183,14 @@ menu
 			{
 				enabled "rowNumber == 1"
 				opacity lua "step == 1 and 0 or 255"
-				area 0 0 752 -1
+				area 0 0 736 -1
 				text lua "getDialogText(1)"
 				text style "normal"
 			}
 			text
 			{
 				enabled "rowNumber == 2"
-				area 0 0 752 -1
+				area 0 0 736 -1
 				pad 0 0 0 12
 				text lua "getDialogText(2)"
 				text style "normal"
