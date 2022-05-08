@@ -14722,7 +14722,7 @@ menu
 	button
 	{
 		on escape
-		area 194 718 234 44
+		area 198 718 234 44
 		text "BACK_BUTTON"
 		text style "button"
 		bam GUIOSTUL
@@ -14732,7 +14732,7 @@ menu
 	button
 	{
 		on escape
-		area 194 718 234 44
+		area 198 718 234 44
 		text "CANCEL_BUTTON"
 		text style "button"
 		bam GUIOSTUL
@@ -14750,7 +14750,7 @@ menu
 	}
 	button
 	{
-		area 650 718 234 44
+		area 646 718 234 44
 		text "CREATE_PARTY_BUTTON"
 		text style "button"
 		bam GUIOSTUR
@@ -19356,7 +19356,7 @@ menu
 	"
 	label
 	{
-		mosaic GUIARBIT
+		mosaic GUICREDT
 		area 0 0 1024 768
 	}
 	label
