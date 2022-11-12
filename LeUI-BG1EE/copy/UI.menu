@@ -1346,9 +1346,9 @@ function compareCustomSound(s1, s2)
 	elseif (s2.sound == "DEFAULT" and s1.sound ~= "DEFAULT") then
 		return false
 	elseif (string.sub(s1.sound, 1, 4) == "BDTP" and string.sub(s2.sound, 1, 4) ~= "BDTP") then
-		return false;
+		return false
 	elseif (string.sub(s2.sound, 1, 4) == "BDTP" and string.sub(s1.sound, 1, 4) ~= "BDTP") then
-		return true;
+		return true
 	end
 	return s1.sound < s2.sound
 end
@@ -4100,22 +4100,23 @@ menu
 	modal
 	label
 	{
-		area 0 0 900 234
+		area 0 0 406 415
 		mosaic GUIERR7
 	}
 	label
 	{
-		area 55 21 789 126
+		area 82 74 242 88
 		text lua "getStringFromAmbiguousSource(Popup4Button.info)"
-		text style	"label"
+		text style "normal"
 		text align center center
 	}
 	button
 	{
-		area 656 170 201 44
-		bam		GUIOSTLM
+		area 52 170 300 44
+		bam GUIOSTCL
+		align center center
 		text lua "t(Popup4Button.farRightText)"
-		text style	"button"
+		text style "button"
 		action
 		"
 			Infinity_PopMenu()
@@ -4126,10 +4127,11 @@ menu
 	}
 	button
 	{
-		area 448 170 201 44
-		bam		GUIOSTLM
-		text style	"button"
+		area 52 218 300 44
+		bam GUIOSTCL
+		align center center
 		text lua "t(Popup4Button.rightText)"
+		text style "button"
 		action
 		"
 			Infinity_PopMenu()
@@ -4140,10 +4142,11 @@ menu
 	}
 	button
 	{
-		area 242 170 201 44
-		bam		GUIOSTLM
-		text style	"button"
+		area 52 266 300 44
+		bam GUIOSTCL
+		align center center
 		text lua "t(Popup4Button.leftText)"
+		text style "button"
 		action
 		"
 			Infinity_PopMenu()
@@ -4154,10 +4157,11 @@ menu
 	}
 	button
 	{
-		area 38 170 201 44
-		bam		GUIOSTLM
-		text style	"button"
+		area 103 320 201 44
+		bam GUIOSTLM
+		align center center
 		text lua "t(Popup4Button.farLeftText)"
+		text style "button"
 		action
 		"
 			Infinity_PopMenu()
@@ -9972,11 +9976,20 @@ menu
 		text "QUIT_GAME_BUTTON"
 		action
 		"
-			popup3Button(16456,
-			'CANCEL_BUTTON', nil,
-			'MAIN_MENU_BUTTON', function() optionsScreen:QuitGame() end,
-			'SAVE_BUTTON', function() optionsScreen:SaveGame(0) end
-			)
+			if e:IsTouchUI() then
+				popup3Button(16456,
+				'CANCEL_BUTTON', nil,
+				'MAIN_MENU_BUTTON', function() optionsScreen:QuitGame() end,
+				'SAVE_BUTTON', function() optionsScreen:SaveGame(0) end
+				)
+			else
+				popup4Button(16456,
+				'CANCEL_BUTTON', nil,
+				'QUIT_BUTTON', function() Infinity_ShutdownGame() end,
+				'MAIN_MENU_BUTTON', function() optionsScreen:QuitGame() end,
+				'SAVE_BUTTON', function() optionsScreen:SaveGame(0) end
+				)
+			end
 		"
 	}
 	button
@@ -14223,7 +14236,7 @@ menu
 	{
 		name "worldPlayerDialogFake"
 		enabled "step == 1"
-		area 138 20 702 210
+		area 138 20 702 310
 		text lua "getDialogText(2)"
 		text style "normal"
 	}
@@ -15805,6 +15818,7 @@ menu
 		cannotFurtherSpecialize = false
 		currentChargenProficiency = nil
 		currentChargenThiefSkill = nil
+		levelUpInfoToggle = 0
 		ticksPassed = 0
 		ticksStarting = 0
 		Infinity_PlaySound('GAM_03')
